@@ -1,9 +1,21 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"log"
+	"net/http"
+)
 
 func main() {
-	fmt.Println("Hello from Drone CI")
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "Hello from Drone CI")
+	})
+
+	addr := ":8080"
+	log.Printf("server listening on %s", addr)
+	if err := http.ListenAndServe(addr, nil); err != nil {
+		log.Fatalf("server error: %v", err)
+	}
 }
 
 func Add(a, b int) int {
