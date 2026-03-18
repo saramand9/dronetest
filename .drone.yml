@@ -55,24 +55,13 @@ steps:
     commands:
       - |
         if [ "$DRONE_BUILD_STATUS" = "success" ]; then
-          MSG="✅ 构建成功
-> 仓库：$DRONE_REPO_NAMESPACE/$DRONE_REPO_NAME
-> 分支：$DRONE_COMMIT_BRANCH
-> 构建号：#$DRONE_BUILD_NUMBER";
+          MSG="构建成功 仓库:$DRONE_REPO_NAMESPACE/$DRONE_REPO_NAME 分支:$DRONE_COMMIT_BRANCH 构建号:#$DRONE_BUILD_NUMBER"
         else
-          MSG="❌ 构建失败
-> 仓库：$DRONE_REPO_NAMESPACE/$DRONE_REPO_NAME
-> 分支：$DRONE_COMMIT_BRANCH
-> 构建号：#$DRONE_BUILD_NUMBER";
+          MSG="构建失败 仓库:$DRONE_REPO_NAMESPACE/$DRONE_REPO_NAME 分支:$DRONE_COMMIT_BRANCH 构建号:#$DRONE_BUILD_NUMBER"
         fi
         curl -sS "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=d5c0d7bc-2e89-4061-819a-41bd2a21410a" \
           -H 'Content-Type: application/json' \
-          -d "{
-            \"msgtype\": \"markdown\",
-            \"markdown\": {
-              \"content\": \"${MSG}\"
-            }
-          }"
+          -d "{\"msgtype\":\"text\",\"text\":{\"content\":\"${MSG}\"}}"
 
 trigger:
   branch:
