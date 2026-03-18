@@ -1,4 +1,5 @@
 kind: pipeline
+type: docker
 name: default
 
 steps:
@@ -7,14 +8,40 @@ steps:
     commands:
       - go test -v ./...
 
-  - name: build
-    image: golang:1.21-alpine
+  - name: build-and-push-image
+    image: docker:27-cli
+    volumes:
+      - name: dockersock
+        path: /var/run/docker.sock
+    environment:
+      REGISTRY: 42.193.172.161:5000
+      IMAGE_NAME: dronetest
     commands:
-      - go build -o app .
+      - IMAGE=$REGISTRY/$IMAGE_NAME
+      - TAG=${DRONE_BUILD_NUMBER}
+      - docker build -t $IMAGE:$TAG .
+      - docker tag $IMAGE:$TAG $IMAGE:latest
+      - docker push $IMAGE:$TAG
+      - docker push $IMAGE:latest
+
+  - name: deploy
+    image: docker:27-cli
+    volumes:
+      - name: dockersock
+        path: /var/run/docker.sock
     when:
+      branch:
+        - main
+        - master
       event:
         - push
-        - pull_request
+    commands:
+      - IMAGE=$REGISTRY/$IMAGE_NAME
+      - TAG=${DRONE_BUILD_NUMBER}
+      - docker pull $IMAGE:$TAG
+      - docker stop dronetest || true
+      - docker rm dronetest || true
+      - docker run -d --name dronetest -p 8080:8080 $IMAGE:$TAG
 
 trigger:
   branch:
@@ -23,3 +50,8 @@ trigger:
   event:
     - push
     - pull_request
+
+volumes:
+  - name: dockersock
+    host:
+      path: /var/run/docker.sock
