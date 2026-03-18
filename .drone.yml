@@ -8,15 +8,13 @@ clone:
 steps:
   - name: notify-wechat-start
     image: curlimages/curl:8.7.1
-    when:
-      status:
-        - success
-        - failure
+    environment:
+      TZ: Asia/Shanghai
     commands:
       - |
         START_TS=$(date +%s)
         START_TIME=$(date +"%Y-%m-%d %H:%M:%S")
-        echo "$START_TS" > /tmp/build_start_ts
+        echo "$START_TS" > ./_build_start_ts
         MSG="开始构建 时间:$START_TIME 仓库:$DRONE_REPO_NAMESPACE/$DRONE_REPO_NAME 分支:$DRONE_COMMIT_BRANCH 构建号:#$DRONE_BUILD_NUMBER 触发人:$DRONE_COMMIT_AUTHOR"
         cat <<EOF >/tmp/wechat_payload_start.json
         {
@@ -79,11 +77,15 @@ steps:
       status:
         - success
         - failure
+    environment:
+      TZ: Asia/Shanghai
     commands:
       - |
         NOW_TS=$(date +%s)
-        if [ -f /tmp/build_start_ts ]; then
-          START_TS=$(cat /tmp/build_start_ts)
+        if [ -f ./_build_start_ts ]; then
+          START_TS=$(cat ./_build_start_ts)
+        elif [ -n "${DRONE_BUILD_STARTED}" ]; then
+          START_TS=${DRONE_BUILD_STARTED}
         else
           START_TS=$NOW_TS
         fi
