@@ -29,6 +29,9 @@ steps:
     volumes:
       - name: dockersock
         path: /var/run/docker.sock
+    environment:
+      REGISTRY: 10.1.0.17:5000
+      IMAGE_NAME: dronetest
     when:
       branch:
         - main
