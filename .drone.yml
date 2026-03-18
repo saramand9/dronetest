@@ -2,6 +2,9 @@ kind: pipeline
 type: docker
 name: default
 
+clone:
+  retries: 3
+
 steps:
   - name: test
     image: golang:1.21-alpine
