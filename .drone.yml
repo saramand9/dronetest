@@ -14,7 +14,10 @@ steps:
         - failure
     commands:
       - |
-        MSG="开始构建 仓库:$DRONE_REPO_NAMESPACE/$DRONE_REPO_NAME 分支:$DRONE_COMMIT_BRANCH 构建号:#$DRONE_BUILD_NUMBER 触发人:$DRONE_COMMIT_AUTHOR"
+        START_TS=$(date +%s)
+        START_TIME=$(date +"%Y-%m-%d %H:%M:%S")
+        echo "$START_TS" > /tmp/build_start_ts
+        MSG="开始构建 时间:$START_TIME 仓库:$DRONE_REPO_NAMESPACE/$DRONE_REPO_NAME 分支:$DRONE_COMMIT_BRANCH 构建号:#$DRONE_BUILD_NUMBER 触发人:$DRONE_COMMIT_AUTHOR"
         cat <<EOF >/tmp/wechat_payload_start.json
         {
           "msgtype": "text",
@@ -78,10 +81,14 @@ steps:
         - failure
     commands:
       - |
-        START_TS=${DRONE_BUILD_STARTED:-0}
-        FINISH_TS=${DRONE_BUILD_FINISHED:-0}
-        if [ "$START_TS" -gt 0 ] && [ "$FINISH_TS" -ge "$START_TS" ]; then
-          DURATION=$((FINISH_TS - START_TS))
+        NOW_TS=$(date +%s)
+        if [ -f /tmp/build_start_ts ]; then
+          START_TS=$(cat /tmp/build_start_ts)
+        else
+          START_TS=$NOW_TS
+        fi
+        if [ "$NOW_TS" -ge "$START_TS" ]; then
+          DURATION=$((NOW_TS - START_TS))
         else
           DURATION=0
         fi
