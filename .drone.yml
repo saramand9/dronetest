@@ -6,6 +6,27 @@ clone:
   retries: 3
 
 steps:
+  - name: notify-wechat-start
+    image: curlimages/curl:8.7.1
+    when:
+      status:
+        - success
+        - failure
+    commands:
+      - |
+        MSG="开始构建 仓库:$DRONE_REPO_NAMESPACE/$DRONE_REPO_NAME 分支:$DRONE_COMMIT_BRANCH 构建号:#$DRONE_BUILD_NUMBER 触发人:$DRONE_COMMIT_AUTHOR"
+        cat <<EOF >/tmp/wechat_payload_start.json
+        {
+          "msgtype": "text",
+          "text": {
+            "content": "$MSG"
+          }
+        }
+        EOF
+        curl -sS "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=d5c0d7bc-2e89-4061-819a-41bd2a21410a" \
+          -H 'Content-Type: application/json' \
+          -d @/tmp/wechat_payload_start.json
+
   - name: test
     image: golang:1.21-alpine
     commands:
@@ -57,10 +78,17 @@ steps:
         - failure
     commands:
       - |
-        if [ "$DRONE_BUILD_STATUS" = "success" ]; then
-          MSG="构建成功 状态:$DRONE_BUILD_STATUS 仓库:$DRONE_REPO_NAMESPACE/$DRONE_REPO_NAME 分支:$DRONE_COMMIT_BRANCH 构建号:#$DRONE_BUILD_NUMBER 提交人:$DRONE_COMMIT_AUTHOR 提交信息:$DRONE_COMMIT_MESSAGE 详情:$DRONE_BUILD_LINK"
+        START_TS=${DRONE_BUILD_STARTED:-0}
+        FINISH_TS=${DRONE_BUILD_FINISHED:-0}
+        if [ "$START_TS" -gt 0 ] && [ "$FINISH_TS" -ge "$START_TS" ]; then
+          DURATION=$((FINISH_TS - START_TS))
         else
-          MSG="构建失败 状态:$DRONE_BUILD_STATUS 仓库:$DRONE_REPO_NAMESPACE/$DRONE_REPO_NAME 分支:$DRONE_COMMIT_BRANCH 构建号:#$DRONE_BUILD_NUMBER 提交人:$DRONE_COMMIT_AUTHOR 提交信息:$DRONE_COMMIT_MESSAGE 详情:$DRONE_BUILD_LINK"
+          DURATION=0
+        fi
+        if [ "$DRONE_BUILD_STATUS" = "success" ]; then
+          MSG="构建成功 状态:$DRONE_BUILD_STATUS 用时:${DURATION}s 仓库:$DRONE_REPO_NAMESPACE/$DRONE_REPO_NAME 分支:$DRONE_COMMIT_BRANCH 构建号:#$DRONE_BUILD_NUMBER 提交人:$DRONE_COMMIT_AUTHOR 提交信息:$DRONE_COMMIT_MESSAGE 详情:$DRONE_BUILD_LINK"
+        else
+          MSG="构建失败 状态:$DRONE_BUILD_STATUS 用时:${DURATION}s 仓库:$DRONE_REPO_NAMESPACE/$DRONE_REPO_NAME 分支:$DRONE_COMMIT_BRANCH 构建号:#$DRONE_BUILD_NUMBER 提交人:$DRONE_COMMIT_AUTHOR 提交信息:$DRONE_COMMIT_MESSAGE 详情:$DRONE_BUILD_LINK"
         fi
         cat <<EOF >/tmp/wechat_payload.json
         {
