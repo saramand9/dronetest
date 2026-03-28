@@ -13,7 +13,7 @@ go build -o app .
 ## CI/CD
 
 - 推送代码到 `main` 或 `master` 分支，或发起 PR 时触发流水线。
-- 流水线步骤：先执行 `go test`，再执行 `go build`。
+- 流水线步骤：构建并推送 Docker 镜像，按分支条件部署（无单独 CI 测试步骤）。
 
 ## 使用前
 

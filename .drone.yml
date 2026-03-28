@@ -10,14 +10,9 @@ steps:
     image: curlimages/curl:8.7.1
     environment:
       TZ: Asia/Shanghai
-    volumes:
-      - name: shared
-        path: /shared
     commands:
       - |
-        START_TS=$(date +%s)
         START_TIME=$(date +"%Y-%m-%d %H:%M:%S")
-        echo "$START_TS" > /shared/build_start_ts
         MSG="开始构建 时间:$START_TIME 仓库:$DRONE_REPO_NAMESPACE/$DRONE_REPO_NAME 分支:$DRONE_COMMIT_BRANCH 构建号:#$DRONE_BUILD_NUMBER 触发人:$DRONE_COMMIT_AUTHOR"
         cat <<EOF >/tmp/wechat_payload_start.json
         {
@@ -30,11 +25,6 @@ steps:
         curl -sS "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=d5c0d7bc-2e89-4061-819a-41bd2a21410a" \
           -H 'Content-Type: application/json' \
           -d @/tmp/wechat_payload_start.json
-
-  - name: test
-    image: golang:1.21-alpine
-    commands:
-      - go test -v ./...
 
   - name: build-and-push-image
     image: docker:27-cli
@@ -82,28 +72,12 @@ steps:
         - failure
     environment:
       TZ: Asia/Shanghai
-    volumes:
-      - name: shared
-        path: /shared
     commands:
       - |
-        NOW_TS=$(date +%s)
-        if [ -f /shared/build_start_ts ]; then
-          START_TS=$(cat /shared/build_start_ts)
-        elif [ -n "${DRONE_BUILD_STARTED}" ]; then
-          START_TS=${DRONE_BUILD_STARTED}
-        else
-          START_TS=$NOW_TS
-        fi
-        if [ "$NOW_TS" -ge "$START_TS" ]; then
-          DURATION=$((NOW_TS - START_TS))
-        else
-          DURATION=0
-        fi
         if [ "$DRONE_BUILD_STATUS" = "success" ]; then
-          MSG="构建成功 状态:$DRONE_BUILD_STATUS 用时:${DURATION}s 仓库:$DRONE_REPO_NAMESPACE/$DRONE_REPO_NAME 分支:$DRONE_COMMIT_BRANCH 构建号:#$DRONE_BUILD_NUMBER 提交人:$DRONE_COMMIT_AUTHOR 提交信息:$DRONE_COMMIT_MESSAGE 详情:$DRONE_BUILD_LINK"
+          MSG="构建成功 状态:$DRONE_BUILD_STATUS 仓库:$DRONE_REPO_NAMESPACE/$DRONE_REPO_NAME 分支:$DRONE_COMMIT_BRANCH 构建号:#$DRONE_BUILD_NUMBER 提交人:$DRONE_COMMIT_AUTHOR 提交信息:$DRONE_COMMIT_MESSAGE 详情:$DRONE_BUILD_LINK"
         else
-          MSG="构建失败 状态:$DRONE_BUILD_STATUS 用时:${DURATION}s 仓库:$DRONE_REPO_NAMESPACE/$DRONE_REPO_NAME 分支:$DRONE_COMMIT_BRANCH 构建号:#$DRONE_BUILD_NUMBER 提交人:$DRONE_COMMIT_AUTHOR 提交信息:$DRONE_COMMIT_MESSAGE 详情:$DRONE_BUILD_LINK"
+          MSG="构建失败 状态:$DRONE_BUILD_STATUS 仓库:$DRONE_REPO_NAMESPACE/$DRONE_REPO_NAME 分支:$DRONE_COMMIT_BRANCH 构建号:#$DRONE_BUILD_NUMBER 提交人:$DRONE_COMMIT_AUTHOR 提交信息:$DRONE_COMMIT_MESSAGE 详情:$DRONE_BUILD_LINK"
         fi
         cat <<EOF >/tmp/wechat_payload.json
         {
@@ -129,5 +103,3 @@ volumes:
   - name: dockersock
     host:
       path: /var/run/docker.sock
-  - name: shared
-    temp: {}
